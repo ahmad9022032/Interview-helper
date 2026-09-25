@@ -1,0 +1,11 @@
+.env
+backend/.venv/
+backend/**/__pycache__/
+*.pyc
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/tsconfig.tsbuildinfo
+data/resume.txt
+data/selected_model.txt
+.DS_Store

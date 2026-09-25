@@ -1,0 +1,42 @@
+# Optional Docker setup. Ollama keeps running natively on the host (that is where
+# the GPU / Apple Silicon acceleration lives); the backend reaches it through
+# host.docker.internal. The microphone is captured by the browser, so nothing
+# audio-related needs to be inside the containers.
+#
+#   docker compose up --build
+#
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      MODEL: ${MODEL:-qwen3:8b}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-en}
+      PROFILE_PATH: /srv/config/candidate_profile.yaml
+      RESUME_PATH: /srv/data/resume.txt
+    volumes:
+      - ./config:/srv/config
+      - ./data:/srv/data
+      - whisper-models:/models
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+
+volumes:
+  whisper-models:

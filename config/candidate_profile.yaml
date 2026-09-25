@@ -1,0 +1,63 @@
+# Candidate profile used as context for every answer.
+# Edit freely. Keep it factual - the assistant is instructed never to invent
+# experience that is not listed here. Free-form resume text can additionally be
+# pasted in the UI (stored in data/resume.txt) or uploaded as a PDF.
+
+name: Your Name
+current_role: Machine Learning Engineer
+summary: >
+  ML/AI engineer focused on applied deep learning, LLM applications and computer vision.
+  Comfortable owning projects end-to-end: data, modelling, deployment and monitoring.
+
+skills:
+  languages: [Python, SQL, TypeScript]
+  ml: [PyTorch, scikit-learn, Hugging Face Transformers, LangChain, RAG, fine-tuning (LoRA)]
+  computer_vision: [OpenCV, YOLO, image segmentation]
+  backend_and_infra: [FastAPI, Docker, PostgreSQL, Redis, AWS, Git]
+
+preferred_technologies: [Python, PyTorch, FastAPI, Ollama / open-source LLMs, Docker]
+
+projects:
+  - name: FOMI
+    description: >
+      AI assistant that answers questions over internal documents using retrieval-augmented
+      generation. Built the ingestion pipeline, embeddings + vector search and the chat API.
+    technologies: [Python, FastAPI, LangChain, ChromaDB, Ollama]
+    outcome: Reduced time to find internal information for the team; fully local deployment.
+
+  - name: Agentic AI workflow automation
+    description: >
+      Tool-using LLM agents that plan multi-step tasks (search, extract, summarize) with
+      guardrails and human-in-the-loop approval.
+    technologies: [Python, LLM tool calling, FastAPI]
+
+  - name: Medical image classification
+    description: >
+      CNN-based classifier for medical scans with data augmentation and Grad-CAM explanations.
+    technologies: [PyTorch, OpenCV, scikit-learn]
+
+  - name: Interview Copilot
+    description: >
+      Real-time local assistant: microphone -> Silero VAD -> faster-whisper -> local LLM (Ollama)
+      -> concise answer over WebSocket, with a Next.js dashboard.
+    technologies: [Python, FastAPI, faster-whisper, Ollama, Next.js]
+
+work_experience:
+  - role: Machine Learning Engineer
+    company: Example Company
+    period: 2023 - present
+    highlights:
+      - Built and deployed ML models and LLM-based features to production.
+      - Collaborated with product and backend teams; owned model monitoring.
+  - role: Software Engineering Intern
+    company: Example Startup
+    period: 2022
+    highlights:
+      - Developed REST APIs and data pipelines in Python.
+
+education:
+  - degree: BSc Computer Science
+    institution: Example University
+    year: 2023
+
+interests: [LLM applications, agentic AI, computer vision, medical AI]
