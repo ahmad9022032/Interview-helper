@@ -20,7 +20,6 @@ import {
 } from "@/lib/types";
 import { micAlreadyGranted, useAudioCapture } from "@/lib/useAudioCapture";
 import { useCopilotSocket } from "@/lib/useCopilotSocket";
-import { usePushToAsk } from "@/lib/usePushToAsk";
 
 // The worklet posts 1024 samples at 16 kHz, so 64 ms per chunk.
 const CHUNK_MS = 64;
@@ -111,8 +110,49 @@ export default function Page() {
     sendControl({ type: "capture_stop" });
   }, [sendControl]);
 
-  const pushArmed = captureMode === "push" && state.listening && micStatus === "active";
-  const keyHeld = usePushToAsk({ enabled: pushArmed, onPress: beginCapture, onRelease: endCapture });
+  // Click to start, click to send. `recording` is optimistic so the button reacts
+  // on the click rather than waiting for the server to echo the stage back.
+  const [recording, setRecording] = useState(false);
+  const recordingRef = useRef(false);
+
+  const clearRecording = useCallback(() => {
+    if (!recordingRef.current) return;
+    recordingRef.current = false;
+    setRecording(false);
+  }, []);
+
+  const canRecord = captureMode === "push" && state.listening && micStatus === "active" && state.connected;
+
+  const toggleRecording = useCallback(() => {
+    if (!canRecord) return;
+    if (recordingRef.current) {
+      recordingRef.current = false;
+      setRecording(false);
+      endCapture();
+    } else {
+      recordingRef.current = true;
+      setRecording(true);
+      beginCapture();
+    }
+  }, [canRecord, beginCapture, endCapture]);
+
+  // The backend can end a capture on its own: it caps a single question at
+  // PUSH_MAX_S, and it rejects one too short to transcribe. Follow it in both
+  // cases, otherwise the button would sit there claiming to still be recording.
+  useEffect(() => {
+    if (!recording) return;
+    if (state.stage === "transcribing" || state.stage === "thinking" || state.stage === "answering") {
+      clearRecording();
+    }
+  }, [state.stage, recording, clearRecording]);
+
+  useEffect(() => {
+    if (state.error) clearRecording();
+  }, [state.error, clearRecording]);
+
+  useEffect(() => {
+    if (recording && (!state.connected || micStatus !== "active")) clearRecording();
+  }, [recording, state.connected, micStatus, clearRecording]);
 
   const onStart = useCallback(
     async (which: AudioSource) => {
@@ -140,9 +180,10 @@ export default function Page() {
   const onStop = useCallback(() => {
     capturing.current = false;
     preroll.current = [];
+    clearRecording();
     stop();
     sendControl({ type: "stop" });
-  }, [stop, sendControl]);
+  }, [stop, sendControl, clearRecording]);
 
   const onClear = useCallback(() => {
     clearLocal();
@@ -195,7 +236,7 @@ export default function Page() {
   }, [state.connected, micStatus, stop]);
 
   const error = micError ?? state.error;
-  const stage = useMemo(() => (keyHeld ? "capturing" : state.stage), [keyHeld, state.stage]);
+  const stage = useMemo(() => (recording ? "capturing" : state.stage), [recording, state.stage]);
 
   return (
     <main className="app">
@@ -235,7 +276,8 @@ export default function Page() {
         stage={stage}
         whisperReady={state.whisperReady}
         captureMode={captureMode}
-        keyHeld={keyHeld}
+        recording={recording}
+        onToggleRecording={toggleRecording}
         depth={depth}
         onDepthChange={onDepthChange}
         onCaptureModeChange={onCaptureModeChange}

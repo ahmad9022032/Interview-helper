@@ -6,11 +6,12 @@ detects when a question has been asked, and streams a short, interview-ready ans
 your screen.
 
 ```
-Hold SPACE → speaker/mic audio → faster-whisper → local LLM (Ollama) → answer on screen
+Click Record → speaker/mic audio → faster-whisper → local LLM (Ollama) → answer on screen
 ```
 
-You hold the space bar for exactly the question you want answered, so a pause in the middle
-of a question cannot split it and nothing said outside that window is ever transcribed.
+You click once when the interviewer starts asking and once when they finish, so a pause in
+the middle of a question cannot split it and nothing said outside that window is ever
+transcribed.
 
 **Everything runs on your machine.** Audio never leaves your computer: speech-to-text is
 faster-whisper running locally, the language model is served by Ollama locally, and the
@@ -78,8 +79,8 @@ cd frontend && npm install && npm run dev
 ```
 
 Open <http://localhost:3000>, click **Listen to the interviewer** and share the tab your
-interview is in with its audio. Then hold the **space bar** while the interviewer asks a
-question, and release it to get the answer.
+interview is in with its audio. Then click **Record question** when the interviewer starts
+asking, and click it again when they finish to get the answer.
 
 ---
 
@@ -206,9 +207,9 @@ hard-coded; the model in particular is read from `MODEL` at startup.
 | `WHISPER_DEVICE` | `auto` | `cpu`, `cuda`, `auto`. |
 | `WHISPER_COMPUTE_TYPE` | `auto` | `int8` on CPU, `float16` on GPU. |
 | `WHISPER_LANGUAGE` | `en` | A fixed language is faster; `auto` detects. |
-| `CAPTURE_MODE` | `push` | `push` = hold space to mark the question. `auto` = infer it from silence. |
-| `PUSH_MAX_S` | `180` | Safety cap if the key is somehow held forever. |
-| `PUSH_MIN_S` | `0.4` | Taps shorter than this are ignored. |
+| `CAPTURE_MODE` | `push` | `push` = the record button marks the question. `auto` = infer it from silence. |
+| `PUSH_MAX_S` | `180` | Safety cap if a recording is somehow left running. |
+| `PUSH_MIN_S` | `0.4` | Recordings shorter than this are ignored. |
 | `VAD_THRESHOLD` | `0.5` | Speech probability threshold. Raise it in a noisy room. Used by `auto`, and to trim silence in `push`. |
 | `VAD_SILENCE_MS` | `700` | Silence that ends a question. |
 | `VAD_MIN_SPEECH_MS` | `300` | Shorter bursts are treated as noise. |
@@ -253,8 +254,9 @@ rather than inventing it.
    - **Project** — questions about your own resume and projects
 4. Click **Listen to the interviewer**. The browser asks what to share: pick the tab your
    interview is in and tick **Also share tab audio**.
-5. **Hold the space bar while the interviewer asks their question.** Release it when they
-   finish. The transcript appears, the question is shown, and the answer streams in.
+5. **Click Record question when the interviewer starts asking, and click it again when they
+   finish.** The button turns red and counts up while it is recording. The transcript
+   appears, the question is shown, and the answer streams in.
 6. **Stop** pauses capture. **Clear** wipes the transcript, the answer and the rolling
    memory used for follow-ups.
 
@@ -274,9 +276,9 @@ Each setting carries its own token budget, so a longer answer is genuinely longe
 a short one that runs out mid-sentence. Measured on the same question, short produced 69
 words and architecture produced 186.
 
-### Why you hold a key
+### Why you mark the question yourself
 
-Holding space marks exactly what the question is, and that removes a whole class of errors.
+Recording marks exactly what the question is, and that removes a whole class of errors.
 Without it the app has to infer where a question ended from silence, and it gets that wrong
 whenever the interviewer pauses to think mid-sentence:
 
@@ -288,17 +290,18 @@ looking at the words. "Can you explain what a transformer is" is a perfectly com
 sentence, and Whisper even puts a question mark on it. Only you know the interviewer had
 not finished.
 
-While the key is up, nothing is transcribed and nothing is sent to the model, so small talk,
-your own answers and the interviewer reading your resume aloud are all ignored.
+While you are not recording, nothing is transcribed and nothing is sent to the model, so small
+talk, your own answers and the interviewer reading your resume aloud are all ignored.
 
-- Press slightly late and you still keep the first 1.5 seconds, which is buffered continuously.
-- Release slightly late and the trailing silence is trimmed before transcription.
-- A stray tap with no speech in it is rejected, not sent to the model.
-- Switching window while holding the key ends the capture rather than leaving it stuck on.
+- Click slightly late and you still keep the first 1.5 seconds, which is buffered continuously.
+- Stop slightly late and the trailing silence is trimmed before transcription.
+- A stray click with no speech in it is rejected, not sent to the model.
+- If the connection drops or a capture runs past `PUSH_MAX_S`, the button resets itself rather
+  than sitting there claiming to still be recording.
 
 **Automatic** mode is still available next to the capture setting, and behaves the way it did
-before: silence of `VAD_SILENCE_MS` is treated as the end of a question. It needs no key, but
-a mid-question pause longer than that will split the question.
+before: silence of `VAD_SILENCE_MS` is treated as the end of a question. It needs no clicking,
+but a mid-question pause longer than that will split the question.
 
 Follow-up questions work: ask *"What is RAG?"* then *"Why would you use it instead of
 fine-tuning?"* and the second answer knows that "it" means RAG.
@@ -370,8 +373,9 @@ Nothing is recorded to disk and nothing waits for the interview to end.
    through faster-whisper once more (greedy, fixed language). One model instance is loaded at
    startup and reused; work runs in a thread so the event loop keeps accepting audio.
 5. **Where the question starts and ends.** In the default `push` mode you say so: audio is
-   buffered only while the space bar is down, plus 1.5 s of pre-roll from before you pressed,
-   with silence trimmed off both ends before transcription. Nothing else is transcribed at all.
+   buffered only while the record button is active, plus 1.5 s of pre-roll from before you
+   clicked, with silence trimmed off both ends before transcription. Nothing else is
+   transcribed at all.
    In `auto` mode the text is instead accepted as a question if it ends in `?`, starts with
    interview phrasing ("what", "why", "tell me", …), or is at least `MIN_QUESTION_WORDS` long,
    with short fragments held and merged into the next utterance.
@@ -498,7 +502,7 @@ cd backend && source .venv/bin/activate
 
 python tests/test_units.py          # chain-of-thought stripping, question detection, history
 python tests/test_errors.py         # Ollama down, missing model, silence, bad PDF
-python tests/test_push_to_ask.py    # hold-to-ask: pauses, discarded audio, stray taps
+python tests/test_push_to_ask.py    # click-to-record: pauses, discarded audio, stray clicks
 python tests/test_answer_depth.py   # each answer-length setting produces that much answer
 python tests/test_pause_bug.py      # the bug push mode fixes (run it with CAPTURE_MODE=auto)
 python tests/test_ws_pipeline.py    # full audio pipeline over the WebSocket
@@ -565,18 +569,19 @@ A classic Whisper hallucination on near-silence. The common ones are filtered ou
 see others, raise `VAD_THRESHOLD` or `VAD_MIN_SPEECH_MS`.
 
 **Questions are cut in half, or answered too early.**
-This is what `push` mode exists to prevent: hold space for the whole question and a pause
-cannot split it. If you are deliberately using `auto` mode, raise `VAD_SILENCE_MS` to `900`
-so a mid-sentence pause does not end the question, or lower it to `500` if it reacts too slowly.
+This is what `push` mode exists to prevent: record the whole question and a pause cannot split
+it. If you are deliberately using `auto` mode, raise `VAD_SILENCE_MS` to `900` so a mid-sentence
+pause does not end the question, or lower it to `500` if it reacts too slowly.
 
-**Holding space does nothing.**
-Check that capture is running (the bar says Ready, not Idle) and that the page has focus,
-since the key is captured by the page. Clicking into the Ask box hands space back to the text
-field so you can type; click anywhere else to arm it again.
+**The record button is missing or greyed out.**
+It only appears once capture is running, so start with **Listen to the interviewer** or **Use
+microphone instead** first — the bar should say Ready, not Idle. It also greys out while the
+previous question is still being transcribed or answered, and it is hidden entirely in
+**Automatic** mode, which needs no clicking.
 
-**"Too short. Hold the key for the whole question."**
-The key was tapped rather than held, or held over silence. Hold it for the duration of the
-question. `PUSH_MIN_S` sets the threshold.
+**"Too short. Record the whole question before stopping."**
+The recording was stopped almost immediately, or covered only silence. Record for the duration
+of the question. `PUSH_MIN_S` sets the threshold.
 
 **"AI model unavailable. Check Ollama."**
 

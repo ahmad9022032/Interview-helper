@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { PUSH_KEY_LABEL, type AnswerDepth, type AudioSource, type CaptureMode, type MicStatus, type Stage } from "@/lib/types";
+import type { AnswerDepth, AudioSource, CaptureMode, MicStatus, Stage } from "@/lib/types";
 import { DepthPicker } from "./DepthPicker";
+import { RecordButton } from "./RecordButton";
 
 interface Props {
   connected: boolean;
@@ -13,8 +14,9 @@ interface Props {
   stage: Stage;
   whisperReady: boolean;
   captureMode: CaptureMode;
-  keyHeld: boolean;
+  recording: boolean;
   depth: AnswerDepth;
+  onToggleRecording: () => void;
   onDepthChange: (depth: AnswerDepth) => void;
   onCaptureModeChange: (mode: CaptureMode) => void;
   onStart: (source: AudioSource) => void;
@@ -26,7 +28,7 @@ interface Props {
 const STAGE_LABEL: Record<Stage, string> = {
   idle: "Idle",
   listening: "Ready",
-  capturing: "Capturing the question",
+  capturing: "Recording the question",
   speech: "Interviewer speaking",
   transcribing: "Transcribing",
   thinking: "Generating answer",
@@ -36,12 +38,13 @@ const STAGE_LABEL: Record<Stage, string> = {
 export function Controls(props: Props) {
   const {
     connected, listening, micStatus, source, level, stage, whisperReady,
-    captureMode, keyHeld, depth, onDepthChange, onCaptureModeChange,
-    onStart, onStop, onClear, onAsk,
+    captureMode, recording, depth, onToggleRecording, onDepthChange,
+    onCaptureModeChange, onStart, onStop, onClear, onAsk,
   } = props;
   const [typed, setTyped] = useState("");
   const active = micStatus === "active";
-  const push = captureMode === "push";
+  const manual = captureMode === "push";
+  const busy = stage === "transcribing" || stage === "thinking" || stage === "answering";
 
   const submit = () => {
     const text = typed.trim();
@@ -51,11 +54,11 @@ export function Controls(props: Props) {
   };
 
   const dot =
-    keyHeld
+    recording
       ? "red pulse"
       : stage === "speech"
         ? "amber pulse"
-        : stage === "thinking" || stage === "answering" || stage === "transcribing"
+        : busy
           ? "blue pulse"
           : active
             ? "green"
@@ -82,17 +85,21 @@ export function Controls(props: Props) {
             </button>
           </div>
 
-          {push && (
-            <div className={`pushbar ${keyHeld ? "held" : ""}`} aria-live="polite">
-              {keyHeld ? (
-                <>
-                  <span className="rec" /> Recording the question. Release <kbd>{PUSH_KEY_LABEL}</kbd> to answer.
-                </>
-              ) : (
-                <>
-                  Hold <kbd>{PUSH_KEY_LABEL}</kbd> while the interviewer asks. Nothing else is used.
-                </>
-              )}
+          {manual && (
+            <div className={`recordbar ${recording ? "on" : ""}`}>
+              <RecordButton
+                recording={recording}
+                busy={busy}
+                disabled={!connected || !listening}
+                onToggle={onToggleRecording}
+              />
+              <span className="recordhint" aria-live="polite">
+                {recording
+                  ? "Recording. Click again the moment they finish and the answer starts straight away."
+                  : busy
+                    ? `${STAGE_LABEL[stage]}…`
+                    : "Click when the interviewer starts asking. Nothing else is sent."}
+              </span>
             </div>
           )}
         </>
@@ -114,20 +121,20 @@ export function Controls(props: Props) {
 
       <div className="bar modes">
         <span className="meta">Question capture</span>
-        <label className={`pick ${push ? "on" : ""}`}>
+        <label className={`pick ${manual ? "on" : ""}`}>
           <input
             type="radio"
             name="capture-mode"
-            checked={push}
+            checked={manual}
             onChange={() => onCaptureModeChange("push")}
           />
-          Hold <kbd>{PUSH_KEY_LABEL}</kbd> to ask
+          Record button
         </label>
-        <label className={`pick ${!push ? "on" : ""}`}>
+        <label className={`pick ${!manual ? "on" : ""}`}>
           <input
             type="radio"
             name="capture-mode"
-            checked={!push}
+            checked={!manual}
             onChange={() => onCaptureModeChange("auto")}
           />
           Automatic
@@ -135,10 +142,11 @@ export function Controls(props: Props) {
         {!whisperReady && <span className="badge warn">Speech recognition not loaded</span>}
       </div>
 
-      {!active && push && (
+      {!active && manual && (
         <p className="hint">
-          Start listening, then hold <kbd>{PUSH_KEY_LABEL}</kbd> for exactly the question you want answered. Pauses in the
-          middle no longer split it, and anything said while the key is up is discarded.
+          Start listening, then click <b>Record question</b> when the interviewer begins and click it
+          again when they finish. Only what you record is transcribed, and the answer starts the
+          moment you stop.
         </p>
       )}
 

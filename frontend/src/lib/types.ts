@@ -67,15 +67,8 @@ export const CAPTURE_MODE_STORAGE_KEY = "interview-copilot.captureMode";
  *  question ended. */
 export type CaptureMode = "push" | "auto";
 
-/** Held down to mark the question. The space bar is easy to find without looking
- *  and comfortable to hold for a long question. `KeyboardEvent.key` for it is a
- *  single space, so the label is kept separate for display. */
-export const PUSH_KEY = " ";
-export const PUSH_KEY_CODE = "Space";
-export const PUSH_KEY_LABEL = "Space";
-
-/** Seconds of audio kept before the key goes down, so pressing slightly late
- *  does not clip the first words off the question. */
+/** Seconds of audio kept before recording starts, so clicking slightly late does
+ *  not clip the first words off the question. */
 export const PREROLL_S = 1.5;
 
 export interface OllamaModel {

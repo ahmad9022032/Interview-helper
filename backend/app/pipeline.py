@@ -36,7 +36,7 @@ log = logging.getLogger(__name__)
 
 STT_FAILED_MSG = "Could not understand audio. Please repeat."
 STT_UNAVAILABLE_MSG = "Speech recognition unavailable. Check backend logs."
-PUSH_TOO_SHORT_MSG = "Too short. Hold the key for the whole question."
+PUSH_TOO_SHORT_MSG = "Too short. Record the whole question before stopping."
 
 SendFn = Callable[[dict], Awaitable[None]]
 

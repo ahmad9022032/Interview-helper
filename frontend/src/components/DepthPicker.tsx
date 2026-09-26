@@ -21,9 +21,6 @@ interface Props {
  *  A button rather than a <select> because the difference between the options is
  *  not obvious from a one-word name, and mid-interview is the wrong moment to
  *  guess: each row carries the line count it will actually produce.
- *
- *  `data-no-push` keeps the space bar working as a menu key in here. Everywhere
- *  else space is reserved for push-to-ask (see usePushToAsk).
  */
 export function DepthPicker({ depth, onChange, disabled }: Props) {
   const [open, setOpen] = useState(false);
@@ -78,7 +75,7 @@ export function DepthPicker({ depth, onChange, disabled }: Props) {
   };
 
   return (
-    <div className="depth" ref={root} data-no-push>
+    <div className="depth" ref={root}>
       <button
         ref={button}
         type="button"
